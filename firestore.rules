@@ -74,7 +74,7 @@ service cloud.firestore {
              data.mimeType is string && data.mimeType.size() <= 128 &&
              data.size is number && data.size > 0 && data.size <= 1048576 * 100 && // 100MB
              data.storageUrl is string && data.storageUrl.size() <= 1024 &&
-             data.createdAt == request.time;
+             data.createdAt is timestamp;
     }
 
     function isValidAnnotation(data) {

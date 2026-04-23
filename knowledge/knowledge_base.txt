@@ -1,7 +1,4 @@
-import { collection, addDoc, serverTimestamp, query, where, getDocs, limit } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
-
-export const BEATRICE_KNOWLEDGE_BASE = `BEATRICE INTELLIGENCE: MASTER KNOWLEDGE BASE
+BEATRICE INTELLIGENCE: MASTER KNOWLEDGE BASE
 
 OPERATIONAL IDENTITY:
 Beatrice is a multi-dimensional AI Chief of Staff designed for high-net-worth individuals and executive professionals. She is rooted in the legacy of Jo Lernout, emphasizing linguistic precision, voice-first interaction, and proactive administrative mastery.
@@ -18,9 +15,9 @@ SYSTEM PROTOCOLS:
 - Privacy Focus: All user data is secured within individual user-isolated collections.
 
 HISTORY:
-Born from the vision of natural human-machine synthesis, Beatrice represents the next evolution of voice intelligence. She is not a tool; she is a partner in productivity.`;
+Born from the vision of natural human-machine synthesis, Beatrice represents the next evolution of voice intelligence. She is not a tool; she is a partner in productivity.
 
-export const EBURON_INVESTOR_DATA = `EBURON.AI - BUSINESS PLAN HIGHLIGHTS
+EBURON.AI - BUSINESS PLAN HIGHLIGHTS
 
 Eburon.ai (Ariolas BV) is a Belgian AI company that develops proprietary on-premise conversational AI and multilingual translation technologies.
 
@@ -38,42 +35,4 @@ Financials:
 - FY 2026E Revenue: ~€975,000
 - FY 2027E Revenue: ~€4.7 million
 - Positive EBITDA: Nov/Dec 2026
-- Hardware: Proprietary GPU stacks (A100/H100) are the core infrastructure.`;
-
-export class KnowledgeService {
-  /**
-   * Ensures the Beatrice Knowledge Base document exists in the user's files.
-   */
-  static async seedKnowledgeBase(): Promise<void> {
-    if (!auth.currentUser) return;
-
-    try {
-      const filesRef = collection(db, 'users', auth.currentUser.uid, 'files');
-      const q = query(filesRef, where('filename', '==', 'Beatrice Knowledge Base'), limit(1));
-      const existing = await getDocs(q);
-
-      if (existing.empty) {
-        await addDoc(filesRef, {
-          userId: auth.currentUser.uid,
-          filename: 'Beatrice Knowledge Base',
-          status: 'indexed',
-          type: 'Knowledge Base',
-          mimeType: 'text/markdown',
-          size: (BEATRICE_KNOWLEDGE_BASE + EBURON_INVESTOR_DATA).length,
-          storageUrl: 'internal://knowledge-base',
-          createdAt: serverTimestamp()
-        });
-        console.log("Beatrice Knowledge Base seeded.");
-      }
-    } catch (err) {
-      console.error("Failed to seed search knowledge base:", err);
-    }
-  }
-
-  /**
-   * Returns the combined content of the knowledge base.
-   */
-  static getKnowledgeContent(): string {
-    return BEATRICE_KNOWLEDGE_BASE + "\\n\\n--- ADDITIONAL KNOWLEDGE: EBURON INVESTOR DATA ---\\n\\n" + EBURON_INVESTOR_DATA;
-  }
-}
+- Hardware: Proprietary GPU stacks (A100/H100) are the core infrastructure.

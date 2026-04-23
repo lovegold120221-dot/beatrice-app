@@ -11,6 +11,7 @@ interface TalkContextValue {
   lastGeneratedImage: string | null;
   activeContext: ContextType;
   setActiveContext: (ctx: ContextType) => void;
+  micStream: MediaStream | null;
 }
 
 const TalkContext = createContext<TalkContextValue | undefined>(undefined);
@@ -42,6 +43,7 @@ export function TalkProvider({ children }: { children: ReactNode }) {
     ...talkAPI,
     activeContext,
     setActiveContext,
+    micStream: talkAPI.micStream,
   };
 
   return (

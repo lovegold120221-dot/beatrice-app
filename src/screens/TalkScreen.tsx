@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mic, Waves, Loader2, Sparkles, Files, Briefcase, Globe, Plane, User, LayoutGrid } from 'lucide-react';
+import AudioVisualizer from '../components/ui/AudioVisualizer';
 import { useTalk } from '../contexts/TalkContext';
 import { TalkContext } from '../hooks/useLiveAudio';
 
@@ -14,7 +15,8 @@ export default function TalkScreen() {
     transcript, 
     lastGeneratedImage,
     activeContext,
-    setActiveContext
+    setActiveContext,
+    micStream
   } = useTalk();
   const [orbState, setOrbState] = useState<'idle' | 'listening' | 'speaking'>('idle');
   const [showMicPrompt, setShowMicPrompt] = useState(false);
@@ -214,10 +216,11 @@ export default function TalkScreen() {
           <motion.div layout className={`relative flex flex-col items-center transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] ${transcript.length > 0 ? 'justify-start pt-2 pb-4 shrink-0 scale-90' : 'justify-center py-8 flex-1 scale-100'}`}>
             <div className="absolute w-64 h-64 bg-[#D4AF37]/5 rounded-full blur-[60px] pointer-events-none"></div>
             
-            <button 
+             <button 
               onClick={handleOrbClick} 
               className={`w-48 h-48 rounded-full border border-white/10 flex items-center justify-center shadow-inner relative focus:outline-none transition-colors duration-500 ${connected ? 'bg-gradient-to-tr from-[#D4AF37]/20 via-black to-[#1a1a1a]' : 'bg-gradient-to-tr from-black via-black to-[#1a1a1a]'}`}
             >
+              <AudioVisualizer stream={micStream} className="absolute inset-0 w-full h-full rounded-full opacity-30" />
               <div className={`w-40 h-40 rounded-full bg-gradient-to-br from-[#D4AF37]/40 via-black to-transparent p-[1px] flex items-center justify-center ${connected ? 'shadow-[0_0_80px_rgba(212,175,55,0.3)]' : 'shadow-[0_0_30px_rgba(212,175,55,0.1)]'} transition-shadow duration-500`}>
                 <div className="w-full h-full rounded-full bg-black flex items-center justify-center overflow-hidden relative">
                    <div className="w-32 h-32 flex items-center justify-center" style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)' }}>

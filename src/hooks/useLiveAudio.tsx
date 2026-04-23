@@ -63,6 +63,8 @@ export function useLiveAPI(contextString: TalkContext = 'Work') {
   const [speaking, setSpeaking] = useState(false);
   const [detectedLanguage, setDetectedLanguage] = useState<{input: string, output: string, confidence: string} | null>(null);
   const [lastGeneratedImage, setLastGeneratedImage] = useState<string | null>(null);
+  const [micStream, setMicStream] = useState<MediaStream | null>(null);
+  
   const toolStartTimeRef = useRef<Record<string, number>>({});
 
   const updateToolStatus = (
@@ -200,6 +202,7 @@ export function useLiveAPI(contextString: TalkContext = 'Work') {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true } 
       });
+      setMicStream(stream);
 
       const source = audioCtxRef.current!.createMediaStreamSource(stream);
       const workletNode = new AudioWorkletNode(audioCtxRef.current!, 'recorder-processor');
@@ -674,5 +677,5 @@ Start English, then adapt. Use report_language tool on every turn.`;
     }
   };
 
-  return { connect, disconnect, connected, speaking, transcript, detectedLanguage, lastGeneratedImage };
+  return { connect, disconnect, connected, speaking, transcript, detectedLanguage, lastGeneratedImage, micStream };
 }
