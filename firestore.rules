@@ -47,17 +47,30 @@ service cloud.firestore {
              data.keys().size() >= 5 && data.keys().size() <= 6 &&
              data.userId == request.auth.uid &&
              data.content is string && data.content.size() <= 50000 &&
-             data.type in ['preference', 'fact', 'summary', 'snippet'] &&
+             data.type in ['preference', 'fact', 'summary', 'snippet', 'email', 'whatsapp'] &&
              data.createdAt == request.time &&
              data.updatedAt == request.time &&
              ( !('sourceUrl' in data) || (data.sourceUrl is string && data.sourceUrl.size() <= 512) );
     }
 
+    function isValidWhatsAppMessage(data) {
+      return data.keys().hasAll(['userId', 'from', 'to', 'body', 'status', 'timestamp']) &&
+             data.keys().size() == 6 &&
+             data.userId == request.auth.uid &&
+             data.from is string && data.from.size() <= 128 &&
+             data.to is string && data.to.size() <= 128 &&
+             data.body is string && data.body.size() <= 5000 &&
+             data.status in ['sent', 'received', 'failed'] &&
+             data.timestamp == request.time;
+    }
+
     function isValidFile(data) {
-      return data.keys().hasAll(['userId', 'filename', 'mimeType', 'size', 'storageUrl', 'createdAt']) &&
-             data.keys().size() >= 6 && data.keys().size() <= 7 &&
+      return data.keys().hasAll(['userId', 'filename', 'status', 'type', 'mimeType', 'size', 'storageUrl', 'createdAt']) &&
+             data.keys().size() == 8 &&
              data.userId == request.auth.uid &&
              data.filename is string && data.filename.size() <= 256 &&
+             data.status in ['indexed', 'processing', 'failed'] &&
+             data.type is string &&
              data.mimeType is string && data.mimeType.size() <= 128 &&
              data.size is number && data.size > 0 && data.size <= 1048576 * 100 && // 100MB
              data.storageUrl is string && data.storageUrl.size() <= 1024 &&
@@ -135,6 +148,13 @@ service cloud.firestore {
           ( !('completed' in incoming()) || incoming().completed is bool )
         );
         allow delete: if isOwner(userId) && isValidId(reminderId);
+      }
+
+      match /whatsapp_messages/{messageId} {
+        allow list: if isOwner(userId) && resource.data.userId == userId;
+        allow get: if isOwner(userId) && isValidId(messageId);
+        allow create: if isOwner(userId) && isValidId(messageId) && isValidWhatsAppMessage(incoming()) && exists(/databases/$(database)/documents/users/$(userId));
+        allow delete: if isOwner(userId) && isValidId(messageId);
       }
     }
   }

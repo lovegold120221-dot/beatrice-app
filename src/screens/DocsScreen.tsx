@@ -377,10 +377,10 @@ Supply chain delays for our hardware rollout may push the physical product launc
         {googleDocs.length > 0 && (
           <div className="flex flex-col gap-3">
              <h3 className="text-[10px] uppercase tracking-widest text-[#D4AF37] px-1 border-b border-[#D4AF37]/20 pb-2 flex items-center justify-between">
-               <div className="flex items-center gap-2">
-                 <span>Recent Google Drive</span>
+               <div className="flex items-center gap-2 flex-1 min-w-0">
+                 <span className="shrink-0">Recent Google Drive</span>
                  {syncing && <Loader2 size={10} className="animate-spin" />}
-                 {syncError && <span className="text-red-400 normal-case font-light ml-2">{syncError}</span>}
+                 {syncError && <span className="text-red-400 normal-case font-light truncate flex-1 min-w-0">{syncError}</span>}
                </div>
                <button 
                  onClick={loadGoogleFiles}

@@ -159,10 +159,10 @@ export default function TopBar() {
                 <button 
                   onClick={handleConnectGoogle}
                   disabled={isSyncing}
-                  className={`flex items-center gap-3 px-3 py-2 text-xs rounded-xl transition-colors ${hasGoogleToken && !isSyncing ? 'text-white/40 grayscale opacity-50' : 'text-emerald-400 bg-emerald-400/5 hover:bg-emerald-400/10'}`}
+                  className={`flex items-center gap-3 px-3 py-2 text-xs rounded-xl transition-colors ${isSyncing ? 'opacity-50 cursor-wait' : 'text-emerald-400 bg-emerald-400/5 hover:bg-emerald-400/10'}`}
                 >
                   <Wifi size={14} className={isSyncing ? 'animate-pulse' : ''} />
-                  <span>{isSyncing ? 'Syncing...' : hasGoogleToken ? 'Google Synced' : 'Sync Google Services'}</span>
+                  <span>{isSyncing ? 'Syncing...' : hasGoogleToken ? 'Re-sync Google' : 'Sync Google Services'}</span>
                 </button>
                 <button 
                   onClick={handleLogout}

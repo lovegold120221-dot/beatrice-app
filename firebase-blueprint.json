@@ -20,12 +20,26 @@
       "properties": {
         "userId": { "type": "string" },
         "content": { "type": "string" },
-        "type": { "type": "string", "enum": ["preference", "fact", "summary", "snippet"] },
+        "type": { "type": "string", "enum": ["preference", "fact", "summary", "snippet", "email", "whatsapp"] },
         "sourceUrl": { "type": "string" },
         "createdAt": { "type": "string", "format": "timestamp" },
         "updatedAt": { "type": "string", "format": "timestamp" }
       },
       "required": ["userId", "content", "type", "createdAt", "updatedAt"]
+    },
+    "WhatsAppMessage": {
+      "title": "WhatsAppMessage",
+      "description": "Log of WhatsApp messages sent or received via Beatrice",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "from": { "type": "string" },
+        "to": { "type": "string" },
+        "body": { "type": "string" },
+        "status": { "type": "string", "enum": ["sent", "received", "failed"] },
+        "timestamp": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["userId", "from", "to", "body", "status", "timestamp"]
     },
     "UploadedFile": {
       "title": "UploadedFile",
@@ -34,12 +48,14 @@
       "properties": {
         "userId": { "type": "string" },
         "filename": { "type": "string" },
+        "status": { "type": "string", "enum": ["indexed", "processing", "failed"] },
+        "type": { "type": "string" },
         "mimeType": { "type": "string" },
         "size": { "type": "number" },
         "storageUrl": { "type": "string" },
         "createdAt": { "type": "string", "format": "timestamp" }
       },
-      "required": ["userId", "filename", "mimeType", "size", "storageUrl", "createdAt"]
+      "required": ["userId", "filename", "status", "type", "mimeType", "size", "storageUrl", "createdAt"]
     },
     "Annotation": {
       "title": "Annotation",
@@ -88,6 +104,10 @@
     "users/{userId}/reminders/{reminderId}": {
       "schema": { "$ref": "#/entities/Reminder" },
       "description": "User reminders and tasks."
+    },
+    "users/{userId}/whatsapp_messages/{messageId}": {
+      "schema": { "$ref": "#/entities/WhatsAppMessage" },
+      "description": "Logs of WhatsApp communication."
     }
   }
 }
