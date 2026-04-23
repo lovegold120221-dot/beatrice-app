@@ -31,6 +31,8 @@ export default function DocsScreen() {
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [activeDoc, setActiveDoc] = useState<DocFile | null>(null);
+  const [activeDocContent, setActiveDocContent] = useState('');
+  const [fetchingContent, setFetchingContent] = useState(false);
   const [selectedText, setSelectedText] = useState('');
   const [selectionPosition, setSelectionPosition] = useState({ top: 0, left: 0 });
   const [savingSnippet, setSavingSnippet] = useState(false);
@@ -93,6 +95,33 @@ Supply chain delays for our hardware rollout may push the physical product launc
 
     return () => unsubscribe();
   }, [loadGoogleFiles]);
+
+  useEffect(() => {
+    async function fetchContent() {
+      if (!activeDoc || !activeDoc.id) {
+        setActiveDocContent('');
+        return;
+      }
+
+      // If it's a Google Doc (has mimeType and is from Google Drive)
+      if (activeDoc.mimeType === 'application/vnd.google-apps.document') {
+        setFetchingContent(true);
+        try {
+          const content = await GoogleService.getDocument(activeDoc.id, activeDoc.mimeType);
+          setActiveDocContent(content);
+        } catch (err) {
+          console.error("Failed to fetch doc content", err);
+          setActiveDocContent("Failed to load document content. Please try again or re-sync Google services.");
+        } finally {
+          setFetchingContent(false);
+        }
+      } else {
+        // Fallback for mock/local docs for now
+        setActiveDocContent(MOCK_DOCUMENT_CONTENT);
+      }
+    }
+    fetchContent();
+  }, [activeDoc]);
 
   const handleUploadClick = async () => {
     if (!auth.currentUser) return;
@@ -234,11 +263,18 @@ Supply chain delays for our hardware rollout may push the physical product launc
         <div className="flex-1 flex overflow-hidden">
           {/* Document Content */}
           <div className="flex-1 overflow-y-auto px-6 py-6 pb-20 relative border-r border-white/5" onMouseUp={handleSelection} onTouchEnd={handleSelection}>
-             <div className="max-w-2xl mx-auto text-white/80 font-serif leading-relaxed space-y-4 whitespace-pre-wrap selection:bg-[#D4AF37]/30 selection:text-white">
-                {MOCK_DOCUMENT_CONTENT}
-             </div>
+             {fetchingContent ? (
+               <div className="flex flex-col items-center justify-center py-24 gap-4">
+                 <Loader2 className="animate-spin text-[#D4AF37]" size={32} />
+                 <p className="text-[10px] uppercase tracking-[0.2em] text-[#D4AF37] font-medium">Beatrice is reading your document...</p>
+               </div>
+             ) : (
+               <div className="max-w-2xl mx-auto text-white/80 font-serif leading-relaxed space-y-4 whitespace-pre-wrap selection:bg-[#D4AF37]/30 selection:text-white">
+                  {activeDocContent}
+               </div>
+             )}
              
-             {selectedText && !showAnnotationInput && (
+             {selectedText && !showAnnotationInput && !fetchingContent && (
                <div 
                  style={{ top: selectionPosition.top, left: selectionPosition.left }}
                  className="fixed z-50 transform -translate-x-1/2 flex gap-2"

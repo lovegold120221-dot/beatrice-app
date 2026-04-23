@@ -31,14 +31,14 @@ export class GoogleService {
     return null;
   }
 
-  private static async fetchGoogle(url: string, options: RequestInit = {}) {
+  private static async fetchGoogle(url: string, options: RequestInit = {}, asText: boolean = false) {
     const token = await this.getAccessToken();
     if (!token) throw new Error("No Google access token found. Please sign in with Google.");
 
     const headers = {
       ...options.headers,
       'Authorization': `Bearer ${token}`,
-      'Accept': 'application/json'
+      'Accept': asText ? 'text/plain' : 'application/json'
     };
 
     const response = await fetch(url, { ...options, headers });
@@ -67,7 +67,7 @@ export class GoogleService {
       throw new Error(`Google API Error: ${response.status} ${message}`);
     }
 
-    return response.json();
+    return asText ? response.text() : response.json();
   }
 
   static async listEmails(maxResults: number = 5, query: string = '') {
@@ -115,8 +115,12 @@ export class GoogleService {
     return data.files || [];
   }
 
-  static async getDocument(fileId: string) {
-    // Attempt to get text content if it's a google doc
-    return this.fetchGoogle(`https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=text/plain`);
+  static async getDocument(fileId: string, mimeType: string) {
+    // If it's a Google Doc, we must export it. 
+    if (mimeType === 'application/vnd.google-apps.document') {
+      return this.fetchGoogle(`https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=text/plain`, {}, true);
+    }
+    // Fallback for other files: try to get content or just name
+    return `Content preview for ${mimeType} is not fully supported yet in the visual selector. Please use Google Docs for full selection capabilities.`;
   }
 }
