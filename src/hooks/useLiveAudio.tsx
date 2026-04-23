@@ -4,6 +4,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { GoogleService } from '../services/googleService';
 import { ImageService } from '../services/imageService';
+import { WhatsAppService } from '../services/whatsappService';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
@@ -263,17 +264,76 @@ When you speak, also call the report_language function to report the detected in
               },
               {
                 name: 'list_recent_emails',
-                description: 'List the 5 most recent emails from Gmail.',
-                parameters: { type: Type.OBJECT, properties: {} }
+                description: 'List the 10 most recent emails from Gmail.',
+                parameters: { 
+                  type: Type.OBJECT, 
+                  properties: {
+                    query: { type: Type.STRING, description: 'Optional search query like from:name or subject:urgent' }
+                  } 
+                }
               },
               {
                 name: 'list_calendar_events',
-                description: 'List upcoming calendar events for today.',
+                description: 'List upcoming calendar events.',
                 parameters: { type: Type.OBJECT, properties: {} }
               },
               {
                 name: 'list_drive_files',
-                description: 'List recent files from Google Drive.',
+                description: 'List files from Google Drive.',
+                parameters: { type: Type.OBJECT, properties: {} }
+              },
+              {
+                name: 'read_document_content',
+                description: 'Read the full text content of a specific Google Doc.',
+                parameters: {
+                  type: Type.OBJECT,
+                  properties: {
+                    fileId: { type: Type.STRING, description: 'The unique ID of the Google Doc file' },
+                    mimeType: { type: Type.STRING, description: 'The mimeType of the file' }
+                  },
+                  required: ['fileId', 'mimeType']
+                }
+              },
+              {
+                name: 'summarize_document',
+                description: 'Provide a structured summary of document content with specific length or focus.',
+                parameters: {
+                  type: Type.OBJECT,
+                  properties: {
+                    content: { type: Type.STRING, description: 'The raw text content to summarize' },
+                    length: { type: Type.STRING, enum: ['short', 'medium', 'long'], description: 'The desired length of the summary' },
+                    focus: { type: Type.STRING, description: 'Specific area to focus on (e.g. financial risks, action items)' }
+                  },
+                  required: ['content']
+                }
+              },
+              {
+                name: 'create_reminder',
+                description: 'Create a new reminder for Jo in his agenda.',
+                parameters: {
+                  type: Type.OBJECT,
+                  properties: {
+                    title: { type: Type.STRING, description: 'Summary of the reminder' },
+                    dueDate: { type: Type.STRING, description: 'ISO string of the due date' }
+                  },
+                  required: ['title', 'dueDate']
+                }
+              },
+              {
+                name: 'send_whatsapp_message',
+                description: 'Send a WhatsApp message to a contact.',
+                parameters: {
+                  type: Type.OBJECT,
+                  properties: {
+                    to: { type: Type.STRING, description: 'The phone number or contact name' },
+                    body: { type: Type.STRING, description: 'The message content' }
+                  },
+                  required: ['to', 'body']
+                }
+              },
+              {
+                name: 'list_whatsapp_history',
+                description: 'List recent WhatsApp conversations and messages.',
                 parameters: { type: Type.OBJECT, properties: {} }
               },
               {
@@ -405,17 +465,18 @@ When you speak, also call the report_language function to report the detected in
                         `Language: ${args.inputLanguage} ➔ ${args.outputLanguage} (${args.confidence})`
                       );
                     } else if (call.name === 'list_recent_emails') {
-                      const emails = await GoogleService.listEmails(5);
+                      const args = call.args as any;
+                      const emails = await GoogleService.listEmails(10, args.query);
                       result = emails;
                       const count = emails.length;
                       const latestSender = emails[0]?.from.split('<')[0].trim() || 'Unknown';
                       updateToolStatus(
                         'list_recent_emails', 
                         'success', 
-                        `Retrieved ${count} emails. Latest from: ${latestSender}`
+                        `Retrieved ${count} emails. ${args.query ? `Search: "${args.query}"` : `Latest from: ${latestSender}`}`
                       );
                     } else if (call.name === 'list_calendar_events') {
-                      const events = await GoogleService.listEvents(5);
+                      const events = await GoogleService.listEvents(10);
                       result = events;
                       const count = events.length;
                       const next = events[0];
@@ -426,14 +487,71 @@ When you speak, also call the report_language function to report the detected in
                         `Found ${count} events. Next: "${next?.summary || 'N/A'}" ${nextTime ? `at ${nextTime}` : ''}`
                       );
                     } else if (call.name === 'list_drive_files') {
-                      const files = await GoogleService.listFiles(5);
+                      const files = await GoogleService.listFiles(10);
                       result = files;
                       const count = files.length;
                       const firstFile = files[0];
                       updateToolStatus(
                         'list_drive_files', 
                         'success', 
-                        `Sync'd ${count} files. Featured: "${firstFile?.name || 'N/A'}"`
+                        `Accessed ${count} files. Top: "${firstFile?.name || 'N/A'}"`
+                      );
+                    } else if (call.name === 'read_document_content') {
+                      const args = call.args as any;
+                      const content = await GoogleService.getDocument(args.fileId, args.mimeType);
+                      result = { content };
+                      updateToolStatus(
+                        'read_document_content', 
+                        'success', 
+                        `Read ${content.length} characters from document.`
+                      );
+                    } else if (call.name === 'summarize_document') {
+                      const args = call.args as any;
+                      const focusText = args.focus ? ` focused on **${args.focus}**` : '';
+                      const lengthText = args.length ? ` to a **${args.length}** format` : '';
+                      
+                      updateToolStatus(
+                        'summarize_document', 
+                        'success', 
+                        `Synthesizing intelligence${focusText}${lengthText}...`
+                      );
+                      result = { 
+                        acknowledgement: "Synthesis initialized.",
+                        context: `The user wants a ${args.length || 'balanced'} summary focusing on ${args.focus || 'comprehensive highlights'}.`
+                      };
+                    } else if (call.name === 'create_reminder') {
+                      const args = call.args as any;
+                      if (!auth.currentUser) throw new Error("Authentication required");
+                      const remindersRef = collection(db, 'users', auth.currentUser.uid, 'reminders');
+                      await addDoc(remindersRef, {
+                        userId: auth.currentUser.uid,
+                        title: args.title,
+                        dueDate: new Date(args.dueDate),
+                        completed: false,
+                        createdAt: serverTimestamp()
+                      });
+                      updateToolStatus(
+                        'create_reminder', 
+                        'success', 
+                        `Agenda updated: "${args.title}" due ${new Date(args.dueDate).toLocaleDateString()}`
+                      );
+                      result = { success: true };
+                    } else if (call.name === 'send_whatsapp_message') {
+                      const args = call.args as any;
+                      const success = await WhatsAppService.sendMessage(args.to, args.body);
+                      updateToolStatus(
+                        'send_whatsapp_message', 
+                        success ? 'success' : 'error', 
+                        success ? `WhatsApp sent to ${args.to}` : `Failed to send WhatsApp to ${args.to}`
+                      );
+                      result = { success };
+                    } else if (call.name === 'list_whatsapp_history') {
+                      const history = await WhatsAppService.listConversations();
+                      result = history;
+                      updateToolStatus(
+                        'list_whatsapp_history', 
+                        'success', 
+                        `Retrieved ${history.length} WhatsApp messages.`
                       );
                     } else if (call.name === 'save_selected_snippet') {
                       const selection = window.getSelection();

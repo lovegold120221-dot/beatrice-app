@@ -3,6 +3,7 @@ import { Mail, MessageCircle, AlertCircle, CheckCircle2, BrainCircuit, Loader2, 
 import { collection, query, orderBy, onSnapshot, where } from 'firebase/firestore';
 import { db, auth, handleFirestoreError } from '../lib/firebase';
 import { GoogleService } from '../services/googleService';
+import { WhatsAppService, WhatsAppMessage } from '../services/whatsappService';
 
 interface Memory {
   id: string;
@@ -17,6 +18,7 @@ interface Memory {
 export default function MemoryScreen() {
   const [memories, setMemories] = useState<Memory[]>([]);
   const [emails, setEmails] = useState<Memory[]>([]);
+  const [whatsapp, setWhatsapp] = useState<Memory[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All Context');
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,6 +60,22 @@ export default function MemoryScreen() {
     return () => unsubscribe();
   }, []);
 
+  // Sync WhatsApp
+  useEffect(() => {
+    if (!auth.currentUser) return;
+    const unsubscribe = WhatsAppService.getMessages((messages) => {
+      const waMemories: Memory[] = messages.map(m => ({
+        id: m.id,
+        from: `To/From: ${m.from === 'Me' ? m.to : m.from}`,
+        content: m.body,
+        type: 'whatsapp' as const,
+        createdAt: m.timestamp
+      }));
+      setWhatsapp(waMemories);
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Sync emails specifically when search query changes
   useEffect(() => {
     if (!auth.currentUser) return;
@@ -87,7 +105,7 @@ export default function MemoryScreen() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const combinedMemories = [...emails, ...memories].sort((a, b) => {
+  const combinedMemories = [...emails, ...whatsapp, ...memories].sort((a, b) => {
      const dateA = a.createdAt?.toDate?.() || new Date(0);
      const dateB = b.createdAt?.toDate?.() || new Date(0);
      return dateB.getTime() - dateA.getTime();
