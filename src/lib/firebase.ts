@@ -26,14 +26,14 @@ export const db = getFirestore(app, localConfig.firestoreDatabaseId);
 
 export const googleProvider = new GoogleAuthProvider();
 
-// Scopes for Google Services Integration
-googleProvider.addScope('https://www.googleapis.com/auth/gmail.readonly'); 
-googleProvider.addScope('https://www.googleapis.com/auth/drive.readonly'); 
-googleProvider.addScope('https://www.googleapis.com/auth/documents.readonly'); 
-googleProvider.addScope('https://www.googleapis.com/auth/spreadsheets.readonly');
-googleProvider.addScope('https://www.googleapis.com/auth/presentations.readonly');
-googleProvider.addScope('https://www.googleapis.com/auth/calendar.readonly'); 
-googleProvider.addScope('https://www.googleapis.com/auth/contacts.readonly');
+// Scopes for Google Services Integration (Full Management Access)
+googleProvider.addScope('https://www.googleapis.com/auth/gmail.modify'); 
+googleProvider.addScope('https://www.googleapis.com/auth/drive'); 
+googleProvider.addScope('https://www.googleapis.com/auth/documents'); 
+googleProvider.addScope('https://www.googleapis.com/auth/spreadsheets');
+googleProvider.addScope('https://www.googleapis.com/auth/presentations');
+googleProvider.addScope('https://www.googleapis.com/auth/calendar'); 
+googleProvider.addScope('https://www.googleapis.com/auth/contacts');
 googleProvider.addScope('https://www.googleapis.com/auth/userinfo.email');
 googleProvider.addScope('https://www.googleapis.com/auth/userinfo.profile');
 

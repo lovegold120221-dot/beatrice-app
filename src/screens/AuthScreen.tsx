@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mic, Mail, Lock, LogIn, Loader2, Chrome } from 'lucide-react';
-import { auth, googleProvider } from '../lib/firebase';
+import { auth, googleProvider, db } from '../lib/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function AuthScreen() {
   const [isLogin, setIsLogin] = useState(true);
@@ -22,6 +23,13 @@ export default function AuthScreen() {
       if (credential?.accessToken) {
         // Save the token securely to be used across the applet
         localStorage.setItem('beatrice_google_access_token', credential.accessToken);
+        
+        // Sync to Firestore for persistence across services
+        const userRef = doc(db, 'users', result.user.uid);
+        await setDoc(userRef, {
+          googleAccessToken: credential.accessToken,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
       }
       
     } catch (err: any) {
