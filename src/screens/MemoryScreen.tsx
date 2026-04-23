@@ -172,7 +172,7 @@ export default function MemoryScreen() {
         ))}
       </div>
 
-      <div className="flex flex-col gap-4">
+       <div className="flex flex-col gap-4 flex-1 overflow-y-auto pr-2 pb-6 hide-scrollbar">
         {loading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="animate-spin text-[#D4AF37]" size={24} />
@@ -183,22 +183,22 @@ export default function MemoryScreen() {
           </div>
         ) : (
           filteredMemories.map((memory, idx) => (
-            <div key={memory.id + idx} className="glass-panel rounded-2xl p-4 flex flex-col gap-3">
-              <div className="flex items-center gap-2 mb-1">
+            <div key={memory.id + idx} className="glass-panel rounded-2xl p-4 flex flex-col gap-3 min-w-0">
+              <div className="flex items-center gap-2 mb-1 min-w-0">
                 {getIcon(memory.type)}
-                <h3 className="text-[10px] uppercase tracking-widest text-[#D4AF37] font-medium">
+                <h3 className="text-[10px] uppercase tracking-widest text-[#D4AF37] font-medium truncate">
                   {memory.type === 'email' ? 'Inbox Synthesis' : memory.type === 'whatsapp' ? 'WhatsApp Sync' : memory.type === 'snippet' ? 'Document Snippet' : 'Memory Entry'}
                 </h3>
               </div>
               
               {memory.type === 'email' && (
-                <div className="bg-white/5 p-2 rounded-lg border border-white/5 mb-1">
+                <div className="bg-white/5 p-2 rounded-lg border border-white/5 mb-1 min-w-0">
                    <p className="text-[10px] text-white/60 font-semibold truncate">{memory.from}</p>
                    <p className="text-[11px] text-white/90 font-medium truncate">{memory.subject}</p>
                 </div>
               )}
 
-              <p className="text-sm font-serif leading-relaxed text-white/80">
+              <p className="text-sm font-serif leading-relaxed text-white/80 break-words">
                 {memory.type === 'email' && expandedIds.has(memory.id) ? (memory.body || memory.content) : memory.content}
               </p>
               
@@ -212,10 +212,10 @@ export default function MemoryScreen() {
                 {memory.type === 'email' && (
                   <button 
                     onClick={() => toggleExpand(memory.id)}
-                    className="text-[10px] uppercase tracking-widest text-[#D4AF37] hover:text-white transition-colors flex items-center gap-1"
+                    className="text-[10px] uppercase tracking-widest text-[#D4AF37] hover:text-white transition-colors flex items-center gap-1 shrink-0"
                   >
                     {expandedIds.has(memory.id) ? 'Collapse' : 'Show Full Email'}
-                    <p className="text-[8px] transform rotate-90">{expandedIds.has(memory.id) ? '◀' : '▶'}</p>
+                    <p className="text-[10px]">{expandedIds.has(memory.id) ? '▲' : '▼'}</p>
                   </button>
                 )}
               </div>

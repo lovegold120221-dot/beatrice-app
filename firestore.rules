@@ -84,7 +84,7 @@ service cloud.firestore {
              data.fileId is string && data.fileId.size() <= 128 &&
              data.textSelection is string && data.textSelection.size() <= 2000 &&
              data.comment is string && data.comment.size() <= 2000 &&
-             data.createdAt == request.time;
+             data.createdAt is timestamp;
     }
 
     function isValidReminder(data) {
@@ -94,7 +94,7 @@ service cloud.firestore {
              data.title is string && data.title.size() <= 256 &&
              data.dueDate is timestamp &&
              data.completed is bool &&
-             data.createdAt == request.time;
+             data.createdAt is timestamp;
     }
 
     // Pillar 1: Master Gate (Relational Sync)
@@ -104,32 +104,32 @@ service cloud.firestore {
       allow update: if isOwner(userId) && (
         // Action: Update Profile
         incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'googleAccessToken', 'updatedAt']) &&
-        incoming().updatedAt == request.time &&
+        incoming().updatedAt is timestamp &&
         ( !('displayName' in incoming()) || (incoming().displayName is string && incoming().displayName.size() <= 128) ) &&
         ( !('googleAccessToken' in incoming()) || (incoming().googleAccessToken is string && incoming().googleAccessToken.size() <= 2048) )
       );
 
       match /memories/{memoryId} {
-        allow list: if isOwner(userId) && resource.data.userId == userId;
+        allow list: if isOwner(userId);
         allow get: if isOwner(userId) && isValidId(memoryId);
         allow create: if isOwner(userId) && isValidId(memoryId) && isValidMemory(incoming()) && exists(/databases/$(database)/documents/users/$(userId));
         allow update: if isOwner(userId) && isValidId(memoryId) && (
           incoming().diff(existing()).affectedKeys().hasOnly(['content', 'updatedAt']) &&
-          incoming().updatedAt == request.time &&
+          incoming().updatedAt is timestamp &&
           incoming().content is string && incoming().content.size() <= 50000
         );
         allow delete: if isOwner(userId) && isValidId(memoryId);
       }
 
       match /files/{fileId} {
-        allow list: if isOwner(userId) && resource.data.userId == userId;
+        allow list: if isOwner(userId);
         allow get: if isOwner(userId) && isValidId(fileId);
-        allow create: if isOwner(userId) && isValidId(fileId) && isValidFile(incoming()) && exists(/databases/$(database)/documents/users/$(userId));
+        allow create: if isOwner(userId) && isValidId(fileId) && isValidFile(incoming()) && incoming().userId == userId;
         allow delete: if isOwner(userId) && isValidId(fileId);
       }
 
       match /annotations/{annotationId} {
-        allow list: if isOwner(userId) && resource.data.userId == userId;
+        allow list: if isOwner(userId);
         allow get: if isOwner(userId) && isValidId(annotationId);
         allow create: if isOwner(userId) && isValidId(annotationId) && isValidAnnotation(incoming()) && 
                     exists(/databases/$(database)/documents/users/$(userId)) &&
@@ -138,7 +138,7 @@ service cloud.firestore {
       }
 
       match /reminders/{reminderId} {
-        allow list: if isOwner(userId) && resource.data.userId == userId;
+        allow list: if isOwner(userId);
         allow get: if isOwner(userId) && isValidId(reminderId);
         allow create: if isOwner(userId) && isValidId(reminderId) && isValidReminder(incoming()) && exists(/databases/$(database)/documents/users/$(userId));
         allow update: if isOwner(userId) && isValidId(reminderId) && (
@@ -151,7 +151,7 @@ service cloud.firestore {
       }
 
       match /whatsapp_messages/{messageId} {
-        allow list: if isOwner(userId) && resource.data.userId == userId;
+        allow list: if isOwner(userId);
         allow get: if isOwner(userId) && isValidId(messageId);
         allow create: if isOwner(userId) && isValidId(messageId) && isValidWhatsAppMessage(incoming()) && exists(/databases/$(database)/documents/users/$(userId));
         allow delete: if isOwner(userId) && isValidId(messageId);
