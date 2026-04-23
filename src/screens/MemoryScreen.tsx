@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, MessageCircle, AlertCircle, CheckCircle2, BrainCircuit, Loader2, Scissors, Search } from 'lucide-react';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, where } from 'firebase/firestore';
 import { db, auth, handleFirestoreError } from '../lib/firebase';
 import { GoogleService } from '../services/googleService';
 
@@ -37,7 +37,11 @@ export default function MemoryScreen() {
 
     // Load local Firestore memories
     const memoriesRef = collection(db, 'users', auth.currentUser.uid, 'memories');
-    const q = query(memoriesRef, orderBy('createdAt', 'desc'));
+    const q = query(
+      memoriesRef, 
+      where('userId', '==', auth.currentUser.uid),
+      orderBy('createdAt', 'desc')
+    );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const docs = snapshot.docs.map(doc => ({

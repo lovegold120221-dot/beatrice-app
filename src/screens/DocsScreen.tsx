@@ -70,7 +70,11 @@ Supply chain delays for our hardware rollout may push the physical product launc
 
     // Load indexed files from Firestore
     const filesRef = collection(db, 'users', auth.currentUser.uid, 'files');
-    const q = query(filesRef, orderBy('createdAt', 'desc'));
+    const q = query(
+      filesRef, 
+      where('userId', '==', auth.currentUser.uid),
+      orderBy('createdAt', 'desc')
+    );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const docsData = snapshot.docs.map(doc => ({
@@ -119,7 +123,11 @@ Supply chain delays for our hardware rollout may push the physical product launc
     }
 
     const annRef = collection(db, 'users', auth.currentUser.uid, 'annotations');
-    const q = query(annRef, orderBy('createdAt', 'desc'));
+    const q = query(
+      annRef, 
+      where('userId', '==', auth.currentUser.uid),
+      orderBy('createdAt', 'desc')
+    );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs

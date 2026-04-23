@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, Clock, Users, ArrowRight, MessageCircle, Loader2, Bell, CheckCircle2, Plus, X } from 'lucide-react';
-import { collection, query, orderBy, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, Timestamp, where } from 'firebase/firestore';
 import { GoogleService } from '../services/googleService';
 import { db, auth, handleFirestoreError } from '../lib/firebase';
 
@@ -37,7 +37,11 @@ export default function AgendaScreen() {
 
     // Sync Reminders
     const remindersRef = collection(db, 'users', auth.currentUser.uid, 'reminders');
-    const q = query(remindersRef, orderBy('dueDate', 'asc'));
+    const q = query(
+      remindersRef, 
+      where('userId', '==', auth.currentUser.uid),
+      orderBy('dueDate', 'asc')
+    );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Reminder[];
       setReminders(data);

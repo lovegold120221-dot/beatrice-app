@@ -1,5 +1,6 @@
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
+import localConfig from '../../firebase-applet-config.json';
 
 /**
  * Service for interacting with Google APIs (Gmail, Calendar, Drive)
@@ -54,11 +55,13 @@ export class GoogleService {
       
       if (message.includes("is disabled") || message.includes("not been used")) {
         let service = "a Google Service";
-        if (url.includes("gmail.googleapis.com")) service = "Gmail API";
-        if (url.includes("calendar.googleapis.com")) service = "Google Calendar API";
-        if (url.includes("drive.googleapis.com")) service = "Google Drive API";
+        let apiId = "";
+        if (url.includes("gmail.googleapis.com")) { service = "Gmail API"; apiId = "gmail.googleapis.com"; }
+        if (url.includes("calendar.googleapis.com")) { service = "Google Calendar API"; apiId = "calendar.googleapis.com"; }
+        if (url.includes("drive.googleapis.com")) { service = "Google Drive API"; apiId = "drive.googleapis.com"; }
         
-        throw new Error(`ACTION REQUIRED: ${service} is disabled. Contact support or enable it at https://console.cloud.google.com/apis/library.`);
+        throw new Error(`ACTION REQUIRED: ${service} is disabled in your Google Cloud Project. 
+        Please enable it at: https://console.cloud.google.com/apis/library/${apiId}?project=${localConfig.projectId}`);
       }
       
       throw new Error(`Google API Error: ${response.status} ${message}`);
