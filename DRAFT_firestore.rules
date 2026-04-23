@@ -1,0 +1,121 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // -------------------------------------------------------------------------
+    // Primitive Definition
+    // -------------------------------------------------------------------------
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isVerifiedEmail() { return request.auth.token.email_verified == true; }
+
+    // -------------------------------------------------------------------------
+    // Entities Validation
+    // -------------------------------------------------------------------------
+    function isValidUserCreate(data) {
+      return data.keys().hasAll(['email', 'createdAt', 'updatedAt']) 
+        && data.keys().size() <= 4
+        && data.email is string && data.email.size() <= 200
+        && ( !('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100) )
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+    
+    function isValidUserUpdate(data) {
+      return ( !('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100) )
+          && data.updatedAt == request.time
+          && data.email == existing().email 
+          && data.createdAt == existing().createdAt;
+    }
+
+    function isValidMemoryCreate(data, userId) {
+      return data.keys().hasAll(['userId', 'content', 'type', 'createdAt', 'updatedAt'])
+        && data.keys().size() == 5
+        && data.userId == userId
+        && data.content is string && data.content.size() <= 2000
+        && data.type is string && data.type in ['preference', 'fact', 'summary']
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+    
+    function isValidMemoryUpdate(data, userId) {
+      return data.content is string && data.content.size() <= 2000
+        && data.type is string && data.type in ['preference', 'fact', 'summary']
+        && data.updatedAt == request.time
+        && data.userId == existing().userId
+        && data.createdAt == existing().createdAt;
+    }
+
+    function isValidFileCreate(data, userId) {
+      return data.keys().hasAll(['userId', 'filename', 'mimeType', 'size', 'storageUrl', 'createdAt'])
+        && data.keys().size() == 6
+        && data.userId == userId
+        && data.filename is string && data.filename.size() <= 250
+        && data.mimeType is string && data.mimeType.size() <= 100
+        && data.size is number
+        && data.storageUrl is string && data.storageUrl.size() <= 1000
+        && data.createdAt == request.time;
+    }
+
+    // -------------------------------------------------------------------------
+    // Routes and Access Rules
+    // -------------------------------------------------------------------------
+    
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // No list on users
+      
+      allow create: if isValidId(userId) 
+                    && isOwner(userId) 
+                    // && isVerifiedEmail() - we will disable this for now so local testing using popup works without forced verification
+                    && isValidUserCreate(incoming());
+                    
+      allow update: if isValidId(userId)
+                    && isOwner(userId)
+                    && isValidUserUpdate(incoming())
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'updatedAt']);
+
+      allow delete: if false;
+
+      // Subcollections
+      match /memories/{memoryId} {
+        allow get: if isOwner(userId) && isValidId(memoryId);
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+
+        allow create: if isValidId(memoryId)
+                      && isOwner(userId)
+                      && isValidMemoryCreate(incoming(), userId);
+                      
+        allow update: if isValidId(memoryId)
+                      && isOwner(userId)
+                      && isValidMemoryUpdate(incoming(), userId)
+                      && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'type', 'updatedAt']);
+                      
+        allow delete: if isValidId(memoryId) && isOwner(userId);
+      }
+
+      match /files/{fileId} {
+        allow get: if isOwner(userId) && isValidId(fileId);
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+
+        allow create: if isValidId(fileId)
+                      && isOwner(userId)
+                      && isValidFileCreate(incoming(), userId);
+                      
+        allow update: if false; // file metadata should be immutable 
+        
+        allow delete: if isValidId(fileId) && isOwner(userId);
+      }
+    }
+  }
+}

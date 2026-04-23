@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Beatrice",
+  "description": "Beatrice is a natural, multilingual executive voice assistant designed for effortless, premium interaction. It manages tasks, documents (Docs, Drive, Sheets, Slides), and communications (Gmail, WhatsApp via Zapier) through nuanced, real-time voice conversation.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": []
+}

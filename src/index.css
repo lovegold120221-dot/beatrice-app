@@ -1,0 +1,37 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", ui-serif, Georgia, serif;
+  --color-glass: rgba(255, 255, 255, 0.05);
+  --color-glass-border: rgba(255, 255, 255, 0.1);
+  --color-glass-strong: rgba(255, 255, 255, 0.1);
+  --color-accent: #D4AF37; /* Warm gold target color */
+}
+
+@layer base {
+  body {
+    @apply bg-[#0A0A0B] text-white font-sans antialiased selection:bg-accent/30;
+  }
+}
+
+.glass-panel {
+  @apply bg-[var(--color-glass)] backdrop-blur-xl border border-[var(--color-glass-border)];
+}
+
+.glass-panel-heavy {
+  @apply bg-[var(--color-glass-strong)] backdrop-blur-2xl border border-[var(--color-glass-border)];
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.mask-image-fade-top {
+  mask-image: linear-gradient(to bottom, transparent, black 15%);
+}

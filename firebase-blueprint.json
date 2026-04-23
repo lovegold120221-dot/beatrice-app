@@ -1,0 +1,93 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and settings",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "googleAccessToken": { "type": "string", "description": "Securely stored transient access token for Google APIs" },
+        "createdAt": { "type": "string", "format": "timestamp" },
+        "updatedAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["email", "createdAt", "updatedAt"]
+    },
+    "Memory": {
+      "title": "Memory",
+      "description": "Information stored by Beatrice about the user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "content": { "type": "string" },
+        "type": { "type": "string", "enum": ["preference", "fact", "summary", "snippet"] },
+        "sourceUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "timestamp" },
+        "updatedAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["userId", "content", "type", "createdAt", "updatedAt"]
+    },
+    "UploadedFile": {
+      "title": "UploadedFile",
+      "description": "Metadata for files uploaded to Beatrice",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "filename": { "type": "string" },
+        "mimeType": { "type": "string" },
+        "size": { "type": "number" },
+        "storageUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["userId", "filename", "mimeType", "size", "storageUrl", "createdAt"]
+    },
+    "Annotation": {
+      "title": "Annotation",
+      "description": "User notes on specific document segments",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "fileId": { "type": "string" },
+        "textSelection": { "type": "string" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["userId", "fileId", "textSelection", "comment", "createdAt"]
+    },
+    "Reminder": {
+      "title": "Reminder",
+      "description": "User-defined tasks or event alerts",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "dueDate": { "type": "string", "format": "timestamp" },
+        "completed": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "timestamp" }
+      },
+      "required": ["userId", "title", "dueDate", "completed", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles. Id is the Firebase Auth UID."
+    },
+    "users/{userId}/memories/{memoryId}": {
+      "schema": { "$ref": "#/entities/Memory" },
+      "description": "Memories owned by the specific user."
+    },
+    "users/{userId}/files/{fileId}": {
+      "schema": { "$ref": "#/entities/UploadedFile" },
+      "description": "Uploaded file metadata owned by the user."
+    },
+    "users/{userId}/annotations/{annotationId}": {
+      "schema": { "$ref": "#/entities/Annotation" },
+      "description": "User notes linked to documents."
+    },
+    "users/{userId}/reminders/{reminderId}": {
+      "schema": { "$ref": "#/entities/Reminder" },
+      "description": "User reminders and tasks."
+    }
+  }
+}
