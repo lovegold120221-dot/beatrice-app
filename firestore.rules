@@ -1,5 +1,4 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
     // 0. Global Safety Net
@@ -7,137 +6,135 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // -------------------------------------------------------------------------
-    // Primitive Definition
-    // -------------------------------------------------------------------------
+    // Phase 3: Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
-    function incoming() { return request.resource.data; }
-    function existing() { return resource.data; }
-    function isSignedIn() { return request.auth != null; }
-    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
-    function isVerifiedEmail() { return request.auth.token.email_verified == true; }
 
-    // -------------------------------------------------------------------------
-    // Entities Validation
-    // -------------------------------------------------------------------------
-    function isValidUserCreate(data) {
-      return data.keys().hasAll(['email', 'createdAt', 'updatedAt']) 
-        && data.email is string && data.email.size() <= 200
-        && data.createdAt == request.time
-        && data.updatedAt == request.time;
-    }
-    
-    function isValidUserUpdate(data) {
-      return data.updatedAt == request.time
-          && data.email == existing().email 
-          && data.createdAt == existing().createdAt;
+    function incoming() {
+      return request.resource.data;
     }
 
-    function isValidMemoryCreate(data, userId) {
-      return data.keys().hasAll(['userId', 'content', 'type', 'createdAt', 'updatedAt'])
-        && data.userId == userId
-        && data.content is string && data.content.size() <= 5000
-        && data.type is string 
-        && data.createdAt == request.time
-        && data.updatedAt == request.time;
-    }
-    
-    function isValidMemoryUpdate(data, userId) {
-      return data.content is string && data.content.size() <= 5000
-        && data.updatedAt == request.time
-        && data.userId == existing().userId
-        && data.createdAt == existing().createdAt;
+    function existing() {
+      return resource.data;
     }
 
-    function isValidFileCreate(data, userId) {
-      return data.keys().hasAll(['userId', 'filename', 'mimeType', 'size', 'storageUrl', 'createdAt', 'status', 'type'])
-        && data.userId == userId
-        && data.filename is string 
-        && data.createdAt == request.time;
+    // Entity Validations (Pillar 2)
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'createdAt', 'updatedAt']) &&
+             data.keys().size() >= 3 && data.keys().size() <= 5 &&
+             data.email is string && data.email.size() <= 256 &&
+             data.createdAt == request.time &&
+             data.updatedAt == request.time &&
+             ( !('displayName' in data) || (data.displayName is string && data.displayName.size() <= 128) ) &&
+             ( !('googleAccessToken' in data) || (data.googleAccessToken is string && data.googleAccessToken.size() <= 2048) );
     }
 
-    function isValidAnnotationCreate(data, userId) {
-      return data.keys().hasAll(['userId', 'fileId', 'textSelection', 'comment', 'createdAt'])
-        && data.userId == userId
-        && data.fileId is string 
-        && data.createdAt == request.time;
+    function isValidMemory(data) {
+      return data.keys().hasAll(['userId', 'content', 'type', 'createdAt', 'updatedAt']) &&
+             data.keys().size() >= 5 && data.keys().size() <= 6 &&
+             data.userId == request.auth.uid &&
+             data.content is string && data.content.size() <= 50000 &&
+             data.type in ['preference', 'fact', 'summary', 'snippet'] &&
+             data.createdAt == request.time &&
+             data.updatedAt == request.time &&
+             ( !('sourceUrl' in data) || (data.sourceUrl is string && data.sourceUrl.size() <= 512) );
     }
 
-    function isValidReminderCreate(data, userId) {
-      return data.keys().hasAll(['userId', 'title', 'dueDate', 'completed', 'createdAt'])
-        && data.userId == userId
-        && data.title is string 
-        && data.createdAt == request.time;
+    function isValidFile(data) {
+      return data.keys().hasAll(['userId', 'filename', 'mimeType', 'size', 'storageUrl', 'createdAt']) &&
+             data.keys().size() >= 6 && data.keys().size() <= 7 &&
+             data.userId == request.auth.uid &&
+             data.filename is string && data.filename.size() <= 256 &&
+             data.mimeType is string && data.mimeType.size() <= 128 &&
+             data.size is number && data.size > 0 && data.size <= 1048576 * 100 && // 100MB
+             data.storageUrl is string && data.storageUrl.size() <= 1024 &&
+             data.createdAt == request.time;
     }
 
-    function isValidReminderUpdate(data, userId) {
-      return data.userId == existing().userId
-        && data.createdAt == existing().createdAt;
+    function isValidAnnotation(data) {
+      return data.keys().hasAll(['userId', 'fileId', 'textSelection', 'comment', 'createdAt']) &&
+             data.keys().size() == 5 &&
+             data.userId == request.auth.uid &&
+             data.fileId is string && data.fileId.size() <= 128 &&
+             data.textSelection is string && data.textSelection.size() <= 2000 &&
+             data.comment is string && data.comment.size() <= 2000 &&
+             data.createdAt == request.time;
     }
 
-    // -------------------------------------------------------------------------
-    // Routes and Access Rules
-    // -------------------------------------------------------------------------
-    
+    function isValidReminder(data) {
+      return data.keys().hasAll(['userId', 'title', 'dueDate', 'completed', 'createdAt']) &&
+             data.keys().size() == 5 &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() <= 256 &&
+             data.dueDate is timestamp &&
+             data.completed is bool &&
+             data.createdAt == request.time;
+    }
+
+    // Pillar 1: Master Gate (Relational Sync)
     match /users/{userId} {
       allow get: if isOwner(userId);
-      allow list: if false; // No list on users
-      
-      allow create: if isValidId(userId) 
-                    && isOwner(userId) 
-                    && isValidUserCreate(incoming());
-                    
-      allow update: if isValidId(userId)
-                    && isOwner(userId)
-                    && isValidUserUpdate(incoming())
-                    && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'googleAccessToken', 'updatedAt']);
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && (
+        // Action: Update Profile
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'googleAccessToken', 'updatedAt']) &&
+        incoming().updatedAt == request.time &&
+        ( !('displayName' in incoming()) || (incoming().displayName is string && incoming().displayName.size() <= 128) ) &&
+        ( !('googleAccessToken' in incoming()) || (incoming().googleAccessToken is string && incoming().googleAccessToken.size() <= 2048) )
+      );
 
-      allow delete: if false;
-
-      // Subcollections
       match /memories/{memoryId} {
+        allow list: if isOwner(userId) && resource.data.userId == userId;
         allow get: if isOwner(userId) && isValidId(memoryId);
-        allow list: if isOwner(userId);
-
-        allow create: if isValidId(memoryId)
-                      && isOwner(userId)
-                      && isValidMemoryCreate(incoming(), userId);
-                      
-        allow update: if isValidId(memoryId)
-                      && isOwner(userId)
-                      && isValidMemoryUpdate(incoming(), userId)
-                      && incoming().diff(existing()).affectedKeys().hasOnly(['content', 'type', 'sourceUrl', 'updatedAt']);
-                      
-        allow delete: if isValidId(memoryId) && isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(memoryId) && isValidMemory(incoming()) && exists(/databases/$(database)/documents/users/$(userId));
+        allow update: if isOwner(userId) && isValidId(memoryId) && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['content', 'updatedAt']) &&
+          incoming().updatedAt == request.time &&
+          incoming().content is string && incoming().content.size() <= 50000
+        );
+        allow delete: if isOwner(userId) && isValidId(memoryId);
       }
 
       match /files/{fileId} {
+        allow list: if isOwner(userId) && resource.data.userId == userId;
         allow get: if isOwner(userId) && isValidId(fileId);
-        allow list: if isOwner(userId);
-
-        allow create: if isValidId(fileId)
-                      && isOwner(userId)
-                      && isValidFileCreate(incoming(), userId);
-                      
-        allow update: if false; // file metadata should be immutable 
-        
-        allow delete: if isValidId(fileId) && isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(fileId) && isValidFile(incoming()) && exists(/databases/$(database)/documents/users/$(userId));
+        allow delete: if isOwner(userId) && isValidId(fileId);
       }
 
       match /annotations/{annotationId} {
-        allow list: if isOwner(userId);
-        allow create: if isValidId(annotationId) && isOwner(userId) && isValidAnnotationCreate(incoming(), userId);
-        allow delete: if isValidId(annotationId) && isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.userId == userId;
+        allow get: if isOwner(userId) && isValidId(annotationId);
+        allow create: if isOwner(userId) && isValidId(annotationId) && isValidAnnotation(incoming()) && 
+                    exists(/databases/$(database)/documents/users/$(userId)) &&
+                    exists(/databases/$(database)/documents/users/$(userId)/files/$(incoming().fileId));
+        allow delete: if isOwner(userId) && isValidId(annotationId);
       }
 
       match /reminders/{reminderId} {
-        allow list: if isOwner(userId);
+        allow list: if isOwner(userId) && resource.data.userId == userId;
         allow get: if isOwner(userId) && isValidId(reminderId);
-        allow create: if isValidId(reminderId) && isOwner(userId) && isValidReminderCreate(incoming(), userId);
-        allow update: if isValidId(reminderId) && isOwner(userId) && isValidReminderUpdate(incoming(), userId);
-        allow delete: if isValidId(reminderId) && isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(reminderId) && isValidReminder(incoming()) && exists(/databases/$(database)/documents/users/$(userId));
+        allow update: if isOwner(userId) && isValidId(reminderId) && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['completed', 'title', 'dueDate']) &&
+          ( !('title' in incoming()) || (incoming().title is string && incoming().title.size() <= 256) ) &&
+          ( !('dueDate' in incoming()) || incoming().dueDate is timestamp ) &&
+          ( !('completed' in incoming()) || incoming().completed is bool )
+        );
+        allow delete: if isOwner(userId) && isValidId(reminderId);
       }
     }
   }
