@@ -8,12 +8,20 @@ import ContractsScreen from './screens/ContractsScreen';
 import AuthScreen from './screens/AuthScreen';
 import { AuthProvider, useAuth } from './components/AuthProvider';
 import { TalkProvider } from './contexts/TalkContext';
+import { KnowledgeService } from './services/knowledgeService';
+import { useEffect } from 'react';
 
 export type TabKey = 'talk' | 'docs' | 'agenda' | 'memory' | 'contracts';
 
 function AppInner() {
   const [currentTab, setCurrentTab] = useState<TabKey>('talk');
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      KnowledgeService.seedKnowledgeBase();
+    }
+  }, [user]);
 
   const renderScreen = () => {
     switch (currentTab) {

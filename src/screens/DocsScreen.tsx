@@ -3,6 +3,8 @@ import { UploadCloud, File, Trash2, CheckCircle2, Search, Loader2, ExternalLink,
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, where } from 'firebase/firestore';
 import { db, auth, handleFirestoreError } from '../lib/firebase';
 import { GoogleService } from '../services/googleService';
+import { KnowledgeService } from '../services/knowledgeService';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface DocFile {
   id: string;
@@ -38,6 +40,8 @@ export default function DocsScreen() {
   const [savingSnippet, setSavingSnippet] = useState(false);
   const [showAnnotationInput, setShowAnnotationInput] = useState(false);
   const [newComment, setNewComment] = useState('');
+  const [readingMode, setReadingMode] = useState(false);
+  const [readProgress, setReadProgress] = useState(0);
 
   const MOCK_DOCUMENT_CONTENT = `Executive Briefing: Q3 Strategy
 
@@ -98,8 +102,16 @@ Supply chain delays for our hardware rollout may push the physical product launc
 
   useEffect(() => {
     async function fetchContent() {
-      if (!activeDoc || !activeDoc.id) {
+      if (!activeDoc) {
         setActiveDocContent('');
+        setReadingMode(false);
+        return;
+      }
+
+      if (activeDoc.filename === 'Beatrice Knowledge Base') {
+        setActiveDocContent(KnowledgeService.getKnowledgeContent());
+        setReadingMode(true);
+        setReadProgress(0);
         return;
       }
 
@@ -122,6 +134,22 @@ Supply chain delays for our hardware rollout may push the physical product launc
     }
     fetchContent();
   }, [activeDoc]);
+
+  useEffect(() => {
+    if (readingMode && activeDocContent) {
+      const words = activeDocContent.split(' ');
+      const interval = setInterval(() => {
+        setReadProgress(prev => {
+          if (prev >= words.length) {
+            clearInterval(interval);
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 50);
+      return () => clearInterval(interval);
+    }
+  }, [readingMode, activeDocContent]);
 
   const handleUploadClick = async () => {
     if (!auth.currentUser) return;
@@ -270,7 +298,25 @@ Supply chain delays for our hardware rollout may push the physical product launc
                </div>
              ) : (
                <div className="max-w-2xl mx-auto text-white/80 font-serif leading-relaxed space-y-4 whitespace-pre-wrap selection:bg-[#D4AF37]/30 selection:text-white">
-                  {activeDocContent}
+                  {readingMode ? (
+                    <div className="relative">
+                      {activeDocContent.split(' ').map((word, j) => (
+                        <motion.span
+                          key={j}
+                          initial={{ opacity: 0.1 }}
+                          animate={{ 
+                            opacity: j < readProgress ? 1 : 0.1,
+                            color: j === readProgress - 1 ? '#D4AF37' : 'inherit',
+                          }}
+                          className="inline-block mr-1"
+                        >
+                          {word}
+                        </motion.span>
+                      ))}
+                    </div>
+                  ) : (
+                    activeDocContent
+                  )}
                </div>
              )}
              
